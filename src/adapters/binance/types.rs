@@ -2,10 +2,6 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize)]
 pub struct ExchangeInfoDto {
-    // timezone: String,
-    // server_time: i64,
-    // rate_limits: serde_json::Value,
-    // exchange_filters: Vec<Option<serde_json::Value>>,
     pub symbols: Vec<SymbolDto>
 }
 
@@ -16,4 +12,6 @@ pub struct SymbolDto {
     pub base_asset: String,
     #[serde(rename = "quoteAsset")]
     pub quote_asset: String,
+    #[serde(rename = "contractType")]
+    pub contract_type: Option<String>,
 }

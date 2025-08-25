@@ -11,12 +11,13 @@ async fn main() -> Result<(), anyhow::Error> {
 
     info!("🚀 Starting crypto arbitrage monitor");
 
-    let binance = BinanceAdapter::new();
-    let markets = binance.get_markets().await?;
+    let mut binance = BinanceAdapter::new();
+    binance.load_markets().await?;
 
     info!(
         exchange = binance.name(),
-        market_count = markets.len(),
+        spot_market_count = binance.markets.spot.len(),
+        swap_market_count = binance.markets.swap.len(),
         "✅ Successfully fetched markets"
     );
 

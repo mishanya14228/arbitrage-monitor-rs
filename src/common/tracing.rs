@@ -1,4 +1,3 @@
-use tracing::{error, info, warn};
 use tracing_subscriber::{fmt, EnvFilter};
 
 pub fn init_tracing() -> Result<(), anyhow::Error> {
