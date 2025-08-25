@@ -3,7 +3,8 @@
 pub struct Market {
     pub symbol: String,      // "BTCUSDT"
     pub base_asset: String,  // "BTC"
-    pub quote_asset: String, // "USDT" 
+    pub quote_asset: String, // "USDT"
+    pub unified_symbol: String,
     pub market_type: MarketType,
 }
 
