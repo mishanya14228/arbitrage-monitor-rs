@@ -1,7 +1,7 @@
-use super::types::{ExchangeInfoDto, SymbolDto};
+use super::types::{BookTickerDto, ExchangeInfoDto, SymbolDto};
 use crate::adapters::common::{
     traits::ExchangeAdapter,
-    types::{ExchangeMarketsInfo, Market, MarketType},
+    types::{ExchangeApiConfig, ExchangeMarketsInfo, Market, MarketType, SimpleTicker},
 };
 use anyhow::Error;
 use tokio;
@@ -10,17 +10,19 @@ use tracing::instrument;
 // Just data - no methods yet
 #[derive(Debug)]
 pub struct BinanceAdapter {
-    spot_url: String,
-    swap_url: String,
     pub markets: ExchangeMarketsInfo,
+    api: ExchangeApiConfig,
 }
 
-// Add methods to BinanceAdapter
 impl BinanceAdapter {
     pub fn new() -> Self {
         BinanceAdapter {
-            spot_url: "https://api.binance.com".to_string(),
-            swap_url: "https://fapi.binance.com".to_string(),
+            api: {
+                ExchangeApiConfig {
+                    spot_url: "https://api.binance.com".to_string(),
+                    swap_url: "https://fapi.binance.com".to_string(),
+                }
+            },
             markets: {
                 ExchangeMarketsInfo {
                     spot: Vec::new(),
@@ -49,12 +51,18 @@ impl BinanceAdapter {
             .symbols
             .into_iter()
             .filter(filter_fn)
-            .map(|symbol| Market {
-                unified_symbol: format!("{}/{}", symbol.base_asset, symbol.quote_asset),
-                symbol: symbol.symbol,
-                base_asset: symbol.base_asset,
-                quote_asset: symbol.quote_asset,
-                market_type,
+            .map(|symbol| {
+                let mut unified_symbol = format!("{}/{}", symbol.base_asset, symbol.quote_asset);
+                if market_type == MarketType::Swap {
+                    unified_symbol += ":PERP"
+                }
+                Market {
+                    unified_symbol,
+                    symbol: symbol.symbol,
+                    base_asset: symbol.base_asset,
+                    quote_asset: symbol.quote_asset,
+                    market_type,
+                }
             })
             .collect();
 
@@ -67,10 +75,26 @@ impl ExchangeAdapter for BinanceAdapter {
     fn name(&self) -> &str {
         "Binance"
     }
-    
+
+    fn wrap_symbol(&self, symbol: String, market_type: MarketType) -> String {
+        todo!()
+    }
+
+    fn unwrap_symbol(&self, symbol: String, market_type: MarketType) -> String {
+        let base = symbol.strip_suffix("USDT").unwrap_or("");
+        match market_type {
+            MarketType::Swap => {
+                format!("{}/USDT:PERP", base)
+            }
+            MarketType::Spot => {
+                format!("{}/USDT", base)
+            }
+        }
+    }
+
     async fn get_spot_markets(&self) -> Result<Vec<Market>, anyhow::Error> {
         self.fetch_and_map_markets(
-            &self.spot_url,
+            &self.api.spot_url,
             "/api/v3/exchangeInfo",
             MarketType::Spot,
             |symbol| symbol.quote_asset == "USDT",
@@ -80,7 +104,7 @@ impl ExchangeAdapter for BinanceAdapter {
 
     async fn get_swap_markets(&self) -> Result<Vec<Market>, Error> {
         self.fetch_and_map_markets(
-            &self.swap_url,
+            &self.api.swap_url,
             "/fapi/v1/exchangeInfo",
             MarketType::Swap,
             |symbol| {
@@ -89,29 +113,6 @@ impl ExchangeAdapter for BinanceAdapter {
             },
         )
         .await
-
-        // const ENDPOINT: &str = "/fapi/v1/exchangeInfo";
-        // let response = reqwest::get(&format!("{}{}", self.swap_url, ENDPOINT))
-        //     .await?
-        //     .json::<ExchangeInfoDto>()
-        //     .await?;
-        //
-        // let markets = response
-        //     .symbols
-        //     .into_iter()
-        //     .filter(|symbol| {
-        //         symbol.quote_asset == "USDT"
-        //             && symbol.contract_type == Some("PERPETUAL".to_string())
-        //     })
-        //     .map(|symbol| Market {
-        //         unified_symbol: format!("{}/{}", symbol.base_asset, symbol.quote_asset),
-        //         symbol: symbol.symbol,
-        //         base_asset: symbol.base_asset,
-        //         quote_asset: symbol.quote_asset,
-        //         market_type: MarketType::Swap, // These are swap/perpetual contracts
-        //     })
-        //     .collect();
-        // Ok(markets)
     }
 
     #[instrument(level = "info", skip(self))]
@@ -128,5 +129,67 @@ impl ExchangeAdapter for BinanceAdapter {
         all_markets.extend(self.markets.swap.clone());
 
         Ok(all_markets)
+    }
+
+    #[instrument(level = "info", skip(self))]
+    async fn fetch_spot_tickers(
+        &self,
+        tickers: Option<Vec<String>>,
+    ) -> Result<Vec<SimpleTicker>, Error> {
+        const ENDPOINT: &str = "/api/v3/ticker/bookTicker";
+        let response = reqwest::get(&format!("{}{}", self.api.spot_url, ENDPOINT))
+            .await?
+            .json::<Vec<BookTickerDto>>()
+            .await?;
+        let tickers = response
+            .iter()
+            .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
+            .map(|book_ticker| SimpleTicker {
+                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Spot),
+                bid: book_ticker.bid_price.parse().unwrap_or(0.0),
+                ask: book_ticker.ask_price.parse().unwrap_or(0.0),
+                symbol: book_ticker.symbol.clone(),
+            })
+            .collect();
+
+        Ok(tickers)
+    }
+
+    #[instrument(level = "info", skip(self))]
+    async fn fetch_swap_tickers(
+        &self,
+        tickers: Option<Vec<String>>,
+    ) -> Result<Vec<SimpleTicker>, Error> {
+        const ENDPOINT: &str = "/fapi/v1/ticker/bookTicker";
+        let response = reqwest::get(&format!("{}{}", self.api.swap_url, ENDPOINT))
+            .await?
+            .json::<Vec<BookTickerDto>>()
+            .await?;
+        let tickers = response
+            .iter()
+            .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
+            .map(|book_ticker| SimpleTicker {
+                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Swap),
+                bid: book_ticker.bid_price.parse().unwrap_or(0.0),
+                ask: book_ticker.ask_price.parse().unwrap_or(0.0),
+                symbol: book_ticker.symbol.clone(),
+            })
+            .collect();
+        Ok(tickers)
+    }
+
+    async fn fetch_tickers(
+        &self,
+        tickers: Option<Vec<String>>,
+    ) -> Result<Vec<SimpleTicker>, Error> {
+        let (spot_tickers, swap_tickers) =
+            tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
+
+        // // Return combined markets
+        // let mut all_markets = self.markets.spot.clone();
+        // all_markets.extend(self.markets.swap.clone());
+        let mut all_tickers: Vec<SimpleTicker> = spot_tickers?.clone();
+        all_tickers.extend(swap_tickers?);
+        Ok(all_tickers)
     }
 }

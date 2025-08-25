@@ -1,10 +1,17 @@
 #[derive(Debug, Clone)]
+pub struct ExchangeApiConfig {
+    pub spot_url: String,
+    pub swap_url: String,
+}
+
+#[derive(Debug, Clone)]
 pub struct ExchangeMarketsInfo {
     pub spot: Vec<Market>,
     pub swap: Vec<Market>,
 }
 
 impl ExchangeMarketsInfo {
+    #[allow(dead_code)]
     pub fn get_markets(&self, market_type: MarketType) -> &Vec<Market> {
         match market_type {
             MarketType::Spot => &self.spot,
@@ -14,6 +21,7 @@ impl ExchangeMarketsInfo {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct Market {
     pub symbol: String,      // "BTCUSDT"
     pub base_asset: String,  // "BTC"
@@ -22,8 +30,17 @@ pub struct Market {
     pub market_type: MarketType,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MarketType {
     Spot,
     Swap,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct SimpleTicker {
+    pub symbol: String,
+    pub unified_symbol: String,
+    pub bid: f64,
+    pub ask: f64,
 }

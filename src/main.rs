@@ -1,13 +1,14 @@
 mod adapters;
 mod common;
 
+use crate::adapters::common::types::SimpleTicker;
 use crate::adapters::{BinanceAdapter, ExchangeAdapter};
 use crate::common::init_tracing;
 use tracing::info;
 
 #[tokio::main]
 async fn main() -> Result<(), anyhow::Error> {
-    init_tracing();
+    init_tracing().expect("Logger crashed");
 
     info!("🚀 Starting crypto arbitrage monitor");
 
@@ -20,6 +21,10 @@ async fn main() -> Result<(), anyhow::Error> {
         swap_market_count = binance.markets.swap.len(),
         "✅ Successfully fetched markets"
     );
+
+    let tickers = binance.fetch_tickers(None).await?;
+
+    println!("{:#?}", &tickers[..5.min(tickers.len())]);
 
     Ok(())
 }
