@@ -38,9 +38,8 @@ pub enum MarketType {
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
-pub struct SimpleTicker {
+pub struct Ticker24HrChange {
     pub symbol: String,
     pub unified_symbol: String,
-    pub bid: f64,
-    pub ask: f64,
+    pub percentage_change: f32,
 }
