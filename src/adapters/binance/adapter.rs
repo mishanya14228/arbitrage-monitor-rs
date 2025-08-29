@@ -84,11 +84,19 @@ impl ExchangeAdapter for BinanceAdapter {
         self.markets.spot.clone()
     }
 
+    fn set_spot_markets(&mut self, markets: Vec<Ticker24HrChange>) {
+        self.markets.spot = markets;
+    }
+
     fn get_swap_markets(&self) -> Vec<Ticker24HrChange> {
         self.markets.swap.clone()
     }
 
-    #[instrument(level = "info", skip(self))]
+    fn set_swap_markets(&mut self, markets: Vec<Ticker24HrChange>) {
+        self.markets.swap = markets;
+    }
+
+    // #[instrument(level = "info", skip(self))]
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
@@ -111,7 +119,7 @@ impl ExchangeAdapter for BinanceAdapter {
         Ok(tickers)
     }
 
-    #[instrument(level = "info", skip(self))]
+    // #[instrument(level = "info", skip(self))]
     async fn fetch_swap_tickers(
         &self,
         ticker: Option<&str>,
@@ -136,13 +144,18 @@ impl ExchangeAdapter for BinanceAdapter {
         Ok(tickers)
     }
 
-    async fn fetch_tickers(&self) -> Result<Vec<Ticker24HrChange>, Error> {
-        let (spot_tickers, swap_tickers) =
+    #[instrument(level = "info", skip(self))]
+    async fn update_tickers(&mut self) -> Result<Vec<Ticker24HrChange>, Error> {
+        let (spot_fetch_result, swap_fetch_result) =
             tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
-
+        
+        let spot_tickers = spot_fetch_result?;
+        let swap_tickers = swap_fetch_result?;
+        self.set_spot_markets(spot_tickers.clone());
+        self.set_swap_markets(swap_tickers.clone());
         // Return combined markets
-        let mut all_tickers: Vec<Ticker24HrChange> = spot_tickers?.clone();
-        all_tickers.extend(swap_tickers?);
+        let mut all_tickers: Vec<Ticker24HrChange> = spot_tickers;
+        all_tickers.extend(swap_tickers);
         Ok(all_tickers)
     }
 }

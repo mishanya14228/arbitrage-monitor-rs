@@ -9,7 +9,9 @@ pub trait ExchangeAdapter {
     fn unwrap_symbol(&self, symbol: String, market_type: MarketType) -> String;
 
     fn get_spot_markets(&self) -> Vec<Ticker24HrChange>;
+    fn set_spot_markets(&mut self, markets: Vec<Ticker24HrChange>);
     fn get_swap_markets(&self) -> Vec<Ticker24HrChange>;
+    fn set_swap_markets(&mut self, markets: Vec<Ticker24HrChange>);
 
     async fn fetch_spot_tickers(
         &self,
@@ -19,5 +21,5 @@ pub trait ExchangeAdapter {
         &self,
         tickers: Option<&str>,
     ) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
-    async fn fetch_tickers(&self) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
+    async fn update_tickers(&mut self) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
 }
