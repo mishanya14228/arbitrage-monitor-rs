@@ -50,11 +50,8 @@ impl ArbitrageMonitor<1> {
                 exchange = adapter.name(),
                 spot_market_count = adapter.get_spot_markets().len(),
                 swap_market_count = adapter.get_swap_markets().len(),
-                "✅ Successfully fetched markets"
+                "✅ Successfully fetched tickers"
             );
-            //     let tickers = adapter.fetch_tickers(None).await?;
-            //     println!("{:#?}", &tickers[..2.min(tickers.len())]);
-            //     println!("{:#?}", &tickers[tickers.len().saturating_sub(2)..]);
         }
     }
 
