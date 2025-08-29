@@ -3,6 +3,7 @@ use crate::adapters::common::{
     traits::ExchangeAdapter,
     types::{ExchangeApiConfig, ExchangeMarketsInfo, Market, MarketType, Ticker24HrChange},
 };
+use crate::common::parse_json_response;
 use anyhow::Error;
 use async_trait::async_trait;
 use tokio;
@@ -151,13 +152,22 @@ impl ExchangeAdapter for BinanceAdapter {
     #[instrument(level = "info", skip(self))]
     async fn fetch_spot_tickers(
         &self,
-        tickers: Option<Vec<String>>,
+        tickers: Option<Vec<&str>>,
     ) -> Result<Vec<Ticker24HrChange>, Error> {
         const ENDPOINT: &str = "/api/v3/ticker/24hr";
-        let response = reqwest::get(&format!("{}{}", self.api.spot_url, ENDPOINT))
-            .await?
-            .json::<Vec<BookTickerDto>>()
-            .await?;
+        let client = reqwest::Client::new();
+        let url: &str = &format!("{}{}", self.api.spot_url, ENDPOINT);
+        let mut request = client.get(url);
+        if let Some(symbols) = tickers {
+            let wrapped_symbols: Vec<String> = symbols
+                .iter()
+                .map(|x| self.wrap_symbol(x.to_string(), MarketType::Spot))
+                .collect();
+            let symbols_json = serde_json::to_string(&wrapped_symbols)?;
+            request = request.query(&[("symbols", symbols_json)]);
+        }
+
+        let response = request.send().await?.json::<Vec<BookTickerDto>>().await?;
         let tickers = response
             .iter()
             .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
@@ -171,16 +181,29 @@ impl ExchangeAdapter for BinanceAdapter {
         Ok(tickers)
     }
 
+    // TODO: fix when return not vector but singular ticker
+
     #[instrument(level = "info", skip(self))]
     async fn fetch_swap_tickers(
         &self,
-        tickers: Option<Vec<String>>,
+        ticker: Option<&str>,
     ) -> Result<Vec<Ticker24HrChange>, Error> {
         const ENDPOINT: &str = "/fapi/v1/ticker/24hr";
-        let response = reqwest::get(&format!("{}{}", self.api.swap_url, ENDPOINT))
-            .await?
-            .json::<Vec<BookTickerDto>>()
-            .await?;
+        let client = reqwest::Client::new();
+        let url: &str = &format!("{}{}", self.api.swap_url, ENDPOINT);
+        let mut request = client.get(url);
+        if let Some(symbol) = ticker {
+            request = request.query(&[(
+                "symbol",
+                self.wrap_symbol(symbol.to_string(), MarketType::Swap),
+            )]);
+        }
+        let response: Vec<BookTickerDto> = if ticker.is_some() {
+            let single_ticker: BookTickerDto = parse_json_response(request.send().await?).await?;
+            vec![single_ticker]
+        } else {
+            parse_json_response(request.send().await?).await?
+        };
         let tickers = response
             .iter()
             .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))

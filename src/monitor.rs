@@ -36,12 +36,12 @@ impl ArbitrageMonitor<1> {
     }
 
     pub async fn start_monitoring(&mut self) {
-        let futures: Vec<_> = self
-            .adapters
-            .iter_mut()
-            .map(|(_, adapter)| adapter.load_markets())
-            .collect();
-        join_all(futures).await;
+        // let futures: Vec<_> = self
+        //     .adapters
+        //     .iter_mut()
+        //     .map(|(_, adapter)| adapter.load_markets())
+        //     .collect();
+        // join_all(futures).await;
     }
 
     pub fn debug(&self) {
@@ -56,5 +56,9 @@ impl ArbitrageMonitor<1> {
             //     println!("{:#?}", &tickers[..2.min(tickers.len())]);
             //     println!("{:#?}", &tickers[tickers.len().saturating_sub(2)..]);
         }
+    }
+
+    pub fn get_adapter(&self, name: &ExchangeType) -> Option<&dyn ExchangeAdapter> {
+        self.adapters.get(name).map(|adapter| adapter.as_ref())
     }
 }

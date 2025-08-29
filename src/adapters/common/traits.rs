@@ -18,11 +18,11 @@ pub trait ExchangeAdapter {
 
     async fn fetch_spot_tickers(
         &self,
-        tickers: Option<Vec<String>>,
+        tickers: Option<Vec<&str>>,
     ) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
     async fn fetch_swap_tickers(
         &self,
-        tickers: Option<Vec<String>>,
+        tickers: Option<&str>,
     ) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
     async fn fetch_tickers(
         &self,
