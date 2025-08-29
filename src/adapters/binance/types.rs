@@ -1,12 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-pub struct ExchangeInfoDto {
-    pub symbols: Vec<SymbolDto>,
+pub struct BinanceExchangeInfoDto {
+    pub symbols: Vec<BinanceSymbolDto>,
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct SymbolDto {
+pub struct BinanceSymbolDto {
     pub symbol: String,
 
     #[serde(rename = "baseAsset")]
@@ -20,7 +20,7 @@ pub struct SymbolDto {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct BookTickerDto {
+pub struct BinanceBookTickerDto {
     pub symbol: String,
 
     #[serde(rename = "priceChangePercent")]

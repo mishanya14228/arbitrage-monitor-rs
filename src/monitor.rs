@@ -12,6 +12,8 @@ use tracing::{error, info};
 pub struct ArbitrageMonitor<const N: usize> {
     exchanges: [ExchangeType; N],
     adapters: HashMap<ExchangeType, Box<dyn ExchangeAdapter>>,
+
+    interval_seconds: u32,
 }
 
 impl<const N: usize> fmt::Debug for ArbitrageMonitor<N> {
@@ -23,10 +25,10 @@ impl<const N: usize> fmt::Debug for ArbitrageMonitor<N> {
     }
 }
 
-impl ArbitrageMonitor<1> {
+impl ArbitrageMonitor<2> {
     pub fn new() -> Self {
         info!("🚀 Initialized crypto arbitrage monitor");
-        let exchanges = [ExchangeType::Binance];
+        let exchanges = [ExchangeType::Binance, ExchangeType::Bybit];
         let mut adapters = HashMap::new();
         for &exchange in &exchanges {
             let adapter = exchange.create_adapter();
@@ -36,6 +38,7 @@ impl ArbitrageMonitor<1> {
         Self {
             exchanges,
             adapters,
+            interval_seconds: 30,
         }
     }
 
@@ -43,8 +46,11 @@ impl ArbitrageMonitor<1> {
         info!("Starting initial ticker fetch...");
         self.refetch_tickers().await?;
 
-        let schedule = Schedule::from_str("*/30 * * * * *")?;
-        info!("Starting periodic ticker updates every 30 seconds...");
+        let schedule = Schedule::from_str(&format!("*/{} * * * * *", self.interval_seconds))?;
+        info!(
+            interval = self.interval_seconds,
+            "Starting periodic ticker updates every"
+        );
 
         loop {
             let now = Utc::now();
@@ -80,7 +86,7 @@ impl ArbitrageMonitor<1> {
     // }
 
     fn post_fetch(&self) {
-        todo!();
+        info!("post fetch triggered");
     }
 
     pub async fn refetch_tickers(&mut self) -> Result<(), anyhow::Error> {

@@ -1,4 +1,4 @@
-use super::types::BookTickerDto;
+use super::types::BinanceBookTickerDto;
 use crate::adapters::common::{
     traits::ExchangeAdapter,
     types::{ExchangeApiConfig, ExchangeMarketsInfo, MarketType, Ticker24HrChange},
@@ -7,9 +7,7 @@ use crate::common::parse_json_response;
 use anyhow::Error;
 use async_trait::async_trait;
 use tokio;
-use tracing::instrument;
 
-// Just data - no methods yet
 #[derive(Debug)]
 pub struct BinanceAdapter {
     markets: ExchangeMarketsInfo,
@@ -36,7 +34,7 @@ impl BinanceAdapter {
 
     pub fn map_tickers(
         &self,
-        response: Vec<BookTickerDto>,
+        response: Vec<BinanceBookTickerDto>,
         market_type: MarketType,
     ) -> Vec<Ticker24HrChange> {
         response
@@ -57,43 +55,12 @@ impl ExchangeAdapter for BinanceAdapter {
         "Binance"
     }
 
-    fn wrap_symbol(&self, symbol: String, market_type: MarketType) -> String {
-        match market_type {
-            MarketType::Swap => {
-                format!("{}USDT", symbol.strip_suffix("/USDT:PERP").unwrap_or(""))
-            }
-            MarketType::Spot => {
-                format!("{}USDT", symbol.strip_suffix("/USDT").unwrap_or(""))
-            }
-        }
+    fn markets(&self) -> &ExchangeMarketsInfo {
+        &self.markets
     }
 
-    fn unwrap_symbol(&self, symbol: String, market_type: MarketType) -> String {
-        let base = symbol.strip_suffix("USDT").unwrap_or("");
-        match market_type {
-            MarketType::Swap => {
-                format!("{}/USDT:PERP", base)
-            }
-            MarketType::Spot => {
-                format!("{}/USDT", base)
-            }
-        }
-    }
-
-    fn get_spot_markets(&self) -> Vec<Ticker24HrChange> {
-        self.markets.spot.clone()
-    }
-
-    fn set_spot_markets(&mut self, markets: Vec<Ticker24HrChange>) {
-        self.markets.spot = markets;
-    }
-
-    fn get_swap_markets(&self) -> Vec<Ticker24HrChange> {
-        self.markets.swap.clone()
-    }
-
-    fn set_swap_markets(&mut self, markets: Vec<Ticker24HrChange>) {
-        self.markets.swap = markets;
+    fn markets_mut(&mut self) -> &mut ExchangeMarketsInfo {
+        &mut self.markets
     }
 
     // #[instrument(level = "info", skip(self))]
@@ -114,7 +81,7 @@ impl ExchangeAdapter for BinanceAdapter {
             request = request.query(&[("symbols", symbols_json)]);
         }
         let raw_response = request.send().await?;
-        let response: Vec<BookTickerDto> = parse_json_response(raw_response).await?;
+        let response: Vec<BinanceBookTickerDto> = parse_json_response(raw_response).await?;
         let tickers = self.map_tickers(response, MarketType::Spot);
         Ok(tickers)
     }
@@ -134,28 +101,14 @@ impl ExchangeAdapter for BinanceAdapter {
                 self.wrap_symbol(symbol.to_string(), MarketType::Swap),
             )]);
         }
-        let response: Vec<BookTickerDto> = if ticker.is_some() {
-            let single_ticker: BookTickerDto = parse_json_response(request.send().await?).await?;
+        let response: Vec<BinanceBookTickerDto> = if ticker.is_some() {
+            let single_ticker: BinanceBookTickerDto =
+                parse_json_response(request.send().await?).await?;
             vec![single_ticker]
         } else {
             parse_json_response(request.send().await?).await?
         };
         let tickers = self.map_tickers(response, MarketType::Swap);
         Ok(tickers)
-    }
-
-    #[instrument(level = "info", skip(self))]
-    async fn update_tickers(&mut self) -> Result<Vec<Ticker24HrChange>, Error> {
-        let (spot_fetch_result, swap_fetch_result) =
-            tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
-        
-        let spot_tickers = spot_fetch_result?;
-        let swap_tickers = swap_fetch_result?;
-        self.set_spot_markets(spot_tickers.clone());
-        self.set_swap_markets(swap_tickers.clone());
-        // Return combined markets
-        let mut all_tickers: Vec<Ticker24HrChange> = spot_tickers;
-        all_tickers.extend(swap_tickers);
-        Ok(all_tickers)
     }
 }
