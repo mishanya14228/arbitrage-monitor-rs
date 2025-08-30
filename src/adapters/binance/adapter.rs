@@ -6,9 +6,7 @@ use crate::adapters::common::{
 use crate::common::parse_json_response;
 use anyhow::Error;
 use async_trait::async_trait;
-use tokio;
 
-#[derive(Debug)]
 pub struct BinanceAdapter {
     markets: ExchangeMarketsInfo,
     api: ExchangeApiConfig,

@@ -58,7 +58,7 @@ pub trait ExchangeAdapter: Send {
         tickers: Option<&str>,
     ) -> Result<Vec<Ticker24HrChange>, anyhow::Error>;
 
-    #[instrument(level = "info", skip(self))]
+    #[instrument(level = "info", skip(self), fields(adapter = self.name()))]
     async fn update_tickers(&mut self) -> Result<Vec<Ticker24HrChange>, Error> {
         let (spot_fetch_result, swap_fetch_result) =
             tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));

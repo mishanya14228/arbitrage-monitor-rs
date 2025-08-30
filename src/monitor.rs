@@ -25,10 +25,14 @@ impl<const N: usize> fmt::Debug for ArbitrageMonitor<N> {
     }
 }
 
-impl ArbitrageMonitor<2> {
+impl ArbitrageMonitor<3> {
     pub fn new() -> Self {
         info!("🚀 Initialized crypto arbitrage monitor");
-        let exchanges = [ExchangeType::Binance, ExchangeType::Bybit];
+        let exchanges = [
+            ExchangeType::Binance,
+            ExchangeType::Bybit,
+            ExchangeType::OKX,
+        ];
         let mut adapters = HashMap::new();
         for &exchange in &exchanges {
             let adapter = exchange.create_adapter();
@@ -74,8 +78,8 @@ impl ArbitrageMonitor<2> {
         for (_, adapter) in self.adapters.iter() {
             info!(
                 exchange = adapter.name(),
-                spot_market_count = adapter.get_spot_markets().len(),
-                swap_market_count = adapter.get_swap_markets().len(),
+                spot_count = adapter.get_spot_markets().len(),
+                swap_count = adapter.get_swap_markets().len(),
                 "✅ Fetched tickers"
             );
         }

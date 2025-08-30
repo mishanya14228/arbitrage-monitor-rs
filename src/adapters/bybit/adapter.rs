@@ -85,7 +85,7 @@ impl ExchangeAdapter for BybitAdapter {
         &self,
         tickers: Option<Vec<&str>>,
     ) -> Result<Vec<Ticker24HrChange>, Error> {
-        if let Some(tickers) = tickers {
+        if let Some(_tickers) = tickers {
             debug!("Bybit API doesn't support tickers param yet");
         }
         Ok(self.fetch_tickers_unified(MarketType::Spot).await?)
@@ -95,7 +95,7 @@ impl ExchangeAdapter for BybitAdapter {
         &self,
         tickers: Option<&str>,
     ) -> Result<Vec<Ticker24HrChange>, Error> {
-        if let Some(tickers) = tickers {
+        if let Some(_tickers) = tickers {
             debug!("Bybit API doesn't support tickers param yet");
         }
         Ok(self.fetch_tickers_unified(MarketType::Swap).await?)
