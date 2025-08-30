@@ -1,12 +1,13 @@
-use crate::adapters::{BinanceAdapter, BybitAdapter, ExchangeAdapter, OkxAdapter};
+use crate::adapters::{BinanceAdapter, BybitAdapter, ExchangeAdapter, GateAdapter, OkxAdapter};
+
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Copy)]
 pub enum ExchangeType {
     Binance,
     Bybit,
     OKX,
+    Gate,
     // Bitget,
     // BingX,
-    // Gate,
     // Kucoin,
     // HTX,
     // MEXC,
@@ -19,9 +20,9 @@ impl ExchangeType {
             ExchangeType::Binance => Box::new(BinanceAdapter::new()),
             ExchangeType::Bybit => Box::new(BybitAdapter::new()),
             ExchangeType::OKX => Box::new(OkxAdapter::new()),
+            ExchangeType::Gate => Box::new(GateAdapter::new()),
             // ExchangeType::Bitget => {}
             // ExchangeType::BingX => {}
-            // ExchangeType::Gate => {}
             // ExchangeType::Kucoin => {}
             // ExchangeType::HTX => {}
             // ExchangeType::MEXC => {}
