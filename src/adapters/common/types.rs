@@ -1,4 +1,9 @@
 use crate::adapters::okx::OkxTickerDto;
+use crate::adapters::ExchangeAdapter;
+use crate::common::ExchangeType;
+use std::collections::HashMap;
+
+pub type AdaptersMap = HashMap<ExchangeType, Box<dyn ExchangeAdapter>>;
 
 #[derive(Debug, Clone)]
 pub struct ExchangeApiConfig {
@@ -12,6 +17,16 @@ pub struct Ticker24HrChange {
     pub symbol: String,
     pub unified_symbol: String,
     pub percentage_change: f32,
+}
+
+impl Ticker24HrChange {
+    pub fn get_market_type(&self) -> MarketType {
+        if self.unified_symbol.contains("PERP") {
+            MarketType::Swap
+        } else {
+            MarketType::Spot
+        }
+    }
 }
 
 impl From<&OkxTickerDto> for Ticker24HrChange {

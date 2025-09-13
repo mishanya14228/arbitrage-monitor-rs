@@ -1,4 +1,5 @@
-use crate::adapters::ExchangeAdapter;
+use crate::adapters::common::ticker_dataset::TickerDataset;
+use crate::adapters::common::types::{AdaptersMap};
 use crate::common::ExchangeType;
 use chrono::Utc;
 use cron::Schedule;
@@ -11,7 +12,7 @@ use tracing::{error, info};
 
 pub struct ArbitrageMonitor<const N: usize> {
     exchanges: [ExchangeType; N],
-    adapters: HashMap<ExchangeType, Box<dyn ExchangeAdapter>>,
+    adapters: AdaptersMap,
 
     interval_seconds: u32,
 }
@@ -32,7 +33,7 @@ impl ArbitrageMonitor<4> {
             ExchangeType::Binance,
             ExchangeType::Bybit,
             ExchangeType::OKX,
-            ExchangeType::Gate
+            ExchangeType::Gate,
         ];
         let mut adapters = HashMap::new();
         for &exchange in &exchanges {
@@ -47,9 +48,18 @@ impl ArbitrageMonitor<4> {
         }
     }
 
+    async fn tick(&mut self) {
+        if let Err(e) = self.refetch_tickers().await {
+            error!("Ticker update failed: {}", e);
+        } else {
+            self.debug();
+            self.post_fetch()
+        }
+    }
+
     pub async fn start_monitoring(&mut self) -> Result<(), anyhow::Error> {
         info!("Starting initial ticker fetch...");
-        self.refetch_tickers().await?;
+        self.tick().await;
 
         let schedule = Schedule::from_str(&format!("*/{} * * * * *", self.interval_seconds))?;
         info!(
@@ -64,13 +74,7 @@ impl ArbitrageMonitor<4> {
                 let duration_until_next = (next - now).to_std().unwrap_or(Duration::from_secs(30));
 
                 sleep(duration_until_next).await;
-
-                if let Err(e) = self.refetch_tickers().await {
-                    error!("Ticker update failed: {}", e);
-                } else {
-                    self.debug();
-                    self.post_fetch()
-                }
+                self.tick().await;
             }
         }
     }
@@ -92,6 +96,8 @@ impl ArbitrageMonitor<4> {
 
     fn post_fetch(&self) {
         info!("post fetch triggered");
+        let dataset: TickerDataset = (&self.adapters).into();
+        dataset.debug();
     }
 
     pub async fn refetch_tickers(&mut self) -> Result<(), anyhow::Error> {
@@ -102,7 +108,9 @@ impl ArbitrageMonitor<4> {
             .collect();
         let results = join_all(futures).await;
         for result in results {
-            result?;
+            if let Err(e) = result {
+                error!("Error while refetching tickers: {}", e);
+            }
         }
         Ok(())
     }
