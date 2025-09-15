@@ -6,7 +6,7 @@ use crate::adapters::ExchangeAdapter;
 use crate::common::ExchangeType;
 use crate::impl_ticker_from;
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter, Pointer};
+use std::fmt::{Display, Formatter};
 
 pub type AdaptersMap = HashMap<ExchangeType, Box<dyn ExchangeAdapter>>;
 

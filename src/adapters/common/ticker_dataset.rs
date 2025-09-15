@@ -59,7 +59,8 @@ impl TickerDataset {
             "exchange" => exchanges,
             "symbol" => symbols,
             "unified_symbol" => unified_symbols,
-            "last_price" => bids,
+            "bid" => bids,
+            "ask" => asks,
             "volume" => volumes
         ]
         .expect("Valid dataframe")
@@ -87,24 +88,32 @@ impl TickerDataset {
                 df,
                 [col("unified_symbol")],
                 [col("unified_symbol")],
-                JoinArgs::new(JoinType::Inner),
+                JoinArgs::new(JoinType::Inner).with_suffix(Some(PlSmallStr::from_str("_long"))),
             )
-            // Filter out self-comparisons (exchange == exchange_right)
-            .filter(col("exchange").neq(col("exchange_right")))
-            // Calculate absolute and percentage spreads
+            // Filter out self-comparisons (exchange == exchange_long)
+            .filter(col("exchange").neq(col("exchange_long")))
+            /* get avg prices */
             .with_columns([
-                (col("last_price") - col("last_price_right")).alias("absolute_spread"),
-                (((col("last_price") - col("last_price_right")) / col("last_price_right"))
-                    * lit(100.0))
-                .alias("percentage_spread"),
+                ((col("bid") + col("ask_long")) / lit(2)).alias("open_avg_price"),
+                ((col("bid_long") + col("ask")) / lit(2)).alias("exit_avg_price"),
             ])
-            .sort(
-                ["percentage_spread"],
+            /* get open/close diffs */
+            .with_columns([
+                (col("bid") - col("ask_long")).alias("open_diff"),
+                (col("bid_long") - col("ask")).alias("exit_diff"),
+            ])
+            /* calculate spreads */
+            .with_columns([
+                (col("open_diff") / col("open_avg_price") * lit(100)).alias("entry_spread"),
+                (col("exit_diff") / col("exit_avg_price") * lit(100)).alias("exit_spread"),
+            ])
+            .sort_by_exprs(
+                [col("entry_spread")],
                 SortMultipleOptions::default().with_order_descending(true),
             );
         if let Some(filters) = &self.filters {
             spreads
-                .filter(col("percentage_spread").gt_eq(filters.spread_threshold))
+                .filter(col("entry_spread").gt_eq(filters.spread_threshold))
                 .collect()
         } else {
             spreads.collect()
@@ -126,26 +135,26 @@ impl TickerDataset {
     pub fn debug_spread_df(ldf: DataFrame) {
         let spreads_result = ldf
             .lazy()
-            .with_columns([when(col("volume").lt(col("volume_right")))
+            .with_columns([when(col("volume").lt(col("volume_long")))
                 .then(col("volume"))
-                .otherwise(col("volume_right"))
+                .otherwise(col("volume_long"))
                 .alias("min_volume")])
             .select([
                 col("exchange").alias("short"),
-                col("exchange_right").alias("long"),
+                col("exchange_long").alias("long"),
                 col("unified_symbol").alias("symbol"),
-                col("last_price").alias("price"),
+                col("bid").alias("price"),
                 col("min_volume"),
-                // col("absolute_spread"),
-                col("percentage_spread").alias("spread"),
+                col("entry_spread"),
+                col("exit_spread"),
             ])
             .collect();
         match spreads_result {
             Ok(_) => {
                 println!("Ticker dataset spreads: {:#?}", spreads_result);
             }
-            Err(_) => {
-                warn!("Ticker dataset spreads returned an error");
+            Err(err) => {
+                warn!("Ticker dataset spreads returned an error: {err}");
             }
         }
     }

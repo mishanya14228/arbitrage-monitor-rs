@@ -91,10 +91,6 @@ impl ArbitrageMonitor<4> {
         }
     }
 
-    // pub fn get_adapter(&self, name: &ExchangeType) -> Option<&dyn ExchangeAdapter> {
-    //     self.adapters.get(name).map(|adapter| adapter.as_ref())
-    // }
-
     fn post_fetch(&self) {
         let initial_dataset: TickerDataset = (&self.adapters).into();
         initial_dataset.debug_df();
