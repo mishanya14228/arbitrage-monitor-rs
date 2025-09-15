@@ -1,4 +1,5 @@
 use crate::adapters::binance::BinanceBookTickerDto;
+use crate::adapters::bitget::BitgetTickerDto;
 use crate::adapters::bybit::BybitTickerDto;
 use crate::adapters::gate::{GateSpotTickerDto, GateSwapTickerDto};
 use crate::adapters::okx::OkxTickerDto;
@@ -73,5 +74,16 @@ impl From<&BybitTickerDto> for TickerBidAsk {
 }
 impl_ticker_from!(OkxTickerDto);
 impl_ticker_from!(BinanceBookTickerDto);
+impl From<&BitgetTickerDto> for TickerBidAsk {
+    fn from(dto: &BitgetTickerDto) -> Self {
+        TickerBidAsk {
+            unified_symbol: dto.symbol.clone(),
+            symbol: dto.symbol.clone(),
+            volume_usd: dto.volume.parse().unwrap_or(0.0),
+            bid: dto.bid.as_ref().and_then(|b| b.parse().ok()).unwrap_or(0.0),
+            ask: dto.ask.as_ref().and_then(|a| a.parse().ok()).unwrap_or(0.0),
+        }
+    }
+}
 impl_ticker_from!(GateSpotTickerDto);
 impl_ticker_from!(GateSwapTickerDto);

@@ -60,16 +60,17 @@ pub trait ExchangeAdapter: Send {
 
     #[instrument(level = "info", skip(self), fields(adapter = self.name()))]
     async fn update_tickers(&mut self) -> Result<Vec<TickerBidAsk>, Error> {
-        let (spot_fetch_result, swap_fetch_result) =
-            tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
-
-        let spot_tickers = spot_fetch_result?;
-        let swap_tickers = swap_fetch_result?;
-        self.set_spot_markets(spot_tickers.clone());
+        // let (spot_fetch_result, swap_fetch_result) =
+        //     tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
+        // 
+        // let spot_tickers = spot_fetch_result?;
+        // let swap_tickers = swap_fetch_result?;
+        // self.set_spot_markets(spot_tickers.clone());
+        let swap_tickers = self.fetch_swap_tickers(None).await?;
         self.set_swap_markets(swap_tickers.clone());
         // Return combined markets
-        let mut all_tickers: Vec<TickerBidAsk> = spot_tickers;
-        all_tickers.extend(swap_tickers);
-        Ok(all_tickers)
+        // let mut all_tickers: Vec<TickerBidAsk> = spot_tickers;
+        // all_tickers.extend(swap_tickers);
+        Ok(swap_tickers)
     }
 }
