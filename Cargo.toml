@@ -16,3 +16,4 @@ futures = "0.3.31"
 cron = "0.15.0"
 chrono = { version = "0.4.41", features = ["serde"] }
 tokio-tungstenite = { version = "0.27.0", features = ["native-tls"] }
+polars = { version = "0.50.0", features = ["is_in", "lazy"] }
