@@ -25,4 +25,10 @@ pub struct BinanceBookTickerDto {
 
     #[serde(rename = "priceChangePercent")]
     pub percentage_change: String,
+
+    #[serde(rename = "lastPrice")]
+    pub last_price: String,
+
+    #[serde(rename = "quoteVolume")]
+    pub volume: String,
 }

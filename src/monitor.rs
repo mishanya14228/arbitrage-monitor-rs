@@ -1,5 +1,6 @@
 use crate::adapters::common::ticker_dataset::TickerDataset;
-use crate::adapters::common::types::{AdaptersMap};
+use crate::adapters::common::ticker_dataset_utils::FilteringConfig;
+use crate::adapters::common::types::AdaptersMap;
 use crate::common::ExchangeType;
 use chrono::Utc;
 use cron::Schedule;
@@ -8,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use tokio::time::{sleep, Duration};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub struct ArbitrageMonitor<const N: usize> {
     exchanges: [ExchangeType; N],
@@ -95,9 +96,19 @@ impl ArbitrageMonitor<4> {
     // }
 
     fn post_fetch(&self) {
-        info!("post fetch triggered");
-        let dataset: TickerDataset = (&self.adapters).into();
-        dataset.debug();
+        let initial_dataset: TickerDataset = (&self.adapters).into();
+        initial_dataset.debug_df();
+        let mut filtered_dataset = initial_dataset.clone();
+        filtered_dataset.apply_filters(FilteringConfig::default());
+        let spreads = filtered_dataset.calculate_price_spreads();
+        match spreads {
+            Err(err) => {
+                error!("Error calculating price spreads: {}", err);
+            }
+            Ok(spreads_ldf) => {
+                TickerDataset::debug_spread_df(spreads_ldf);
+            }
+        }
     }
 
     pub async fn refetch_tickers(&mut self) -> Result<(), anyhow::Error> {

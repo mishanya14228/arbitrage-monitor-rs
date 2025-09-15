@@ -42,6 +42,8 @@ impl BinanceAdapter {
                 unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
                 symbol: book_ticker.symbol.clone(),
                 percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
+                last_price: book_ticker.last_price.parse().unwrap_or(0.0),
+                volume_usd: book_ticker.volume.parse().unwrap_or(0.0),
             })
             .collect()
     }

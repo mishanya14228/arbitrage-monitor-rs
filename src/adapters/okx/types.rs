@@ -11,4 +11,7 @@ pub struct OkxTickerDto {
     pub symbol: String,
     pub last: String,
     pub open24h: String,
+
+    #[serde(rename = "volCcy24h")]
+    pub volume: String,
 }

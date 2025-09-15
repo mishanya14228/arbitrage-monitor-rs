@@ -17,4 +17,10 @@ pub struct BybitTickerDto {
 
     #[serde(rename = "price24hPcnt")]
     pub percentage_change: String,
+
+    #[serde(rename = "lastPrice")]
+    pub last_price: String,
+
+    #[serde(rename = "volume24h")]
+    pub volume_coin: String,
 }

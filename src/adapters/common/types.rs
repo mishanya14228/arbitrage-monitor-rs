@@ -17,6 +17,8 @@ pub struct Ticker24HrChange {
     pub symbol: String,
     pub unified_symbol: String,
     pub percentage_change: f32,
+    pub last_price: f32,
+    pub volume_usd: f32,
 }
 
 impl Ticker24HrChange {
@@ -44,6 +46,8 @@ impl From<&OkxTickerDto> for Ticker24HrChange {
             symbol: dto.symbol.clone(),
             unified_symbol: dto.symbol.clone(),
             percentage_change,
+            last_price,
+            volume_usd: dto.volume.parse().unwrap_or(0.0),
         }
     }
 }

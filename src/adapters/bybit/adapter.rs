@@ -56,10 +56,16 @@ impl BybitAdapter {
             .list
             .iter()
             .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
-            .map(|book_ticker| Ticker24HrChange {
-                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
-                symbol: book_ticker.symbol.clone(),
-                percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
+            .map(|book_ticker| {
+                let last_price = book_ticker.last_price.parse().unwrap_or(0.0);
+                let coin_volume = book_ticker.volume_coin.parse().unwrap_or(0.0);
+                Ticker24HrChange {
+                    unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
+                    symbol: book_ticker.symbol.clone(),
+                    percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
+                    last_price,
+                    volume_usd: coin_volume * last_price,
+                }
             })
             .collect();
 

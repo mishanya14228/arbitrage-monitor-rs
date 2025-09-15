@@ -9,6 +9,12 @@ pub struct GateSpotTickerDto {
 
     #[serde(rename = "change_percentage")]
     pub percentage_change: String,
+
+    #[serde(rename = "last")]
+    pub last_price: String,
+
+    #[serde(rename = "quote_volume")]
+    pub volume: String,
 }
 
 pub type GateSwapTickersListDto = Vec<GateSwapTickerDto>;
@@ -20,4 +26,10 @@ pub struct GateSwapTickerDto {
 
     #[serde(rename = "change_percentage")]
     pub percentage_change: String,
+
+    #[serde(rename = "last")]
+    pub last_price: String,
+
+    #[serde(rename = "volume_24h_quote")]
+    pub volume: String,
 }
