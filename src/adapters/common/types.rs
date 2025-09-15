@@ -1,7 +1,12 @@
+use crate::adapters::binance::BinanceBookTickerDto;
+use crate::adapters::bybit::BybitTickerDto;
+use crate::adapters::gate::{GateSpotTickerDto, GateSwapTickerDto};
 use crate::adapters::okx::OkxTickerDto;
 use crate::adapters::ExchangeAdapter;
 use crate::common::ExchangeType;
+use crate::impl_ticker_from;
 use std::collections::HashMap;
+use std::fmt::{Display, Formatter, Pointer};
 
 pub type AdaptersMap = HashMap<ExchangeType, Box<dyn ExchangeAdapter>>;
 
@@ -12,50 +17,9 @@ pub struct ExchangeApiConfig {
 }
 
 #[derive(Debug, Clone)]
-#[allow(dead_code)]
-pub struct Ticker24HrChange {
-    pub symbol: String,
-    pub unified_symbol: String,
-    pub percentage_change: f32,
-    pub last_price: f32,
-    pub volume_usd: f32,
-}
-
-impl Ticker24HrChange {
-    pub fn get_market_type(&self) -> MarketType {
-        if self.unified_symbol.contains("PERP") {
-            MarketType::Swap
-        } else {
-            MarketType::Spot
-        }
-    }
-}
-
-impl From<&OkxTickerDto> for Ticker24HrChange {
-    fn from(dto: &OkxTickerDto) -> Self {
-        let last_price = dto.last.parse().unwrap_or(0.0);
-        let open_price = dto.open24h.parse().unwrap_or(0.0);
-
-        let percentage_change = if open_price != 0.0 {
-            ((last_price - open_price) / open_price) * 100.0
-        } else {
-            0.0
-        };
-
-        Ticker24HrChange {
-            symbol: dto.symbol.clone(),
-            unified_symbol: dto.symbol.clone(),
-            percentage_change,
-            last_price,
-            volume_usd: dto.volume.parse().unwrap_or(0.0),
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct ExchangeMarketsInfo {
-    pub spot: Vec<Ticker24HrChange>,
-    pub swap: Vec<Ticker24HrChange>,
+    pub spot: Vec<TickerBidAsk>,
+    pub swap: Vec<TickerBidAsk>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -63,3 +27,51 @@ pub enum MarketType {
     Spot,
     Swap,
 }
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct TickerBidAsk {
+    pub symbol: String,
+    pub unified_symbol: String,
+    pub bid: f32,
+    pub ask: f32,
+    pub volume_usd: f32,
+}
+
+impl TickerBidAsk {
+    pub fn get_market_type(&self) -> MarketType {
+        if self.unified_symbol.contains("PERP") {
+            MarketType::Swap
+        } else {
+            MarketType::Spot
+        }
+    }
+
+    pub fn set_unified_symbol(&mut self, symbol: String) {
+        self.unified_symbol = symbol;
+    }
+}
+
+impl Display for TickerBidAsk {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} - {}", self.unified_symbol, self.volume_usd)
+    }
+}
+
+impl From<&BybitTickerDto> for TickerBidAsk {
+    fn from(dto: &BybitTickerDto) -> Self {
+        let bid = dto.bid.parse().unwrap_or(0.0);
+        let coin_volume = dto.volume_coin.parse().unwrap_or(0.0);
+        TickerBidAsk {
+            unified_symbol: dto.symbol.clone(),
+            symbol: dto.symbol.clone(),
+            volume_usd: coin_volume * bid,
+            bid,
+            ask: dto.ask.parse().unwrap_or(0.0),
+        }
+    }
+}
+impl_ticker_from!(OkxTickerDto);
+impl_ticker_from!(BinanceBookTickerDto);
+impl_ticker_from!(GateSpotTickerDto);
+impl_ticker_from!(GateSwapTickerDto);

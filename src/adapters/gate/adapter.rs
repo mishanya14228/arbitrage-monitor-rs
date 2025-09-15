@@ -1,7 +1,7 @@
 use crate::adapters::common::types::{
-    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, Ticker24HrChange,
+    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, TickerBidAsk,
 };
-use crate::adapters::gate::types::{GateSpotTickersListDto, GateSwapTickersListDto};
+use crate::adapters::gate::{GateSpotTickerDto, GateSwapTickerDto};
 use crate::adapters::ExchangeAdapter;
 use anyhow::Error;
 use async_trait::async_trait;
@@ -89,47 +89,44 @@ impl ExchangeAdapter for GateAdapter {
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    ) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = tickers {
             debug!("Gate API doesn't support tickers param yet");
         }
         const ENDPOINT: &str = "/api/v4/spot/tickers";
-        let response: GateSpotTickersListDto =
+        let response: Vec<GateSpotTickerDto> =
             self.fetch_tickers_unified_http_only(ENDPOINT).await?;
         let tickers = response
             .iter()
             .filter(|ticker| ticker.symbol.ends_with("_USDT"))
-            .map(|book_ticker| Ticker24HrChange {
-                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Spot),
-                symbol: book_ticker.symbol.clone(),
-                percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
-                last_price: book_ticker.last_price.parse().unwrap_or(0.0),
-                volume_usd: book_ticker.volume.parse().unwrap_or(0.0),
+            .map(|book_ticker| {
+                let mut ticker: TickerBidAsk = book_ticker.into();
+                ticker.set_unified_symbol(
+                    self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Spot),
+                );
+                ticker
             })
             .collect();
         Ok(tickers)
     }
 
-    async fn fetch_swap_tickers(
-        &self,
-        ticker: Option<&str>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    async fn fetch_swap_tickers(&self, ticker: Option<&str>) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = ticker {
             debug!("Gate API doesn't support tickers param yet");
         }
 
         const ENDPOINT: &str = "/api/v4/futures/usdt/tickers";
-        let response: GateSwapTickersListDto =
+        let response: Vec<GateSwapTickerDto> =
             self.fetch_tickers_unified_http_only(ENDPOINT).await?;
         let tickers = response
             .iter()
             .filter(|ticker| ticker.symbol.ends_with("_USDT"))
-            .map(|book_ticker| Ticker24HrChange {
-                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Swap),
-                symbol: book_ticker.symbol.clone(),
-                percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
-                last_price: book_ticker.last_price.parse().unwrap_or(0.0),
-                volume_usd: book_ticker.volume.parse().unwrap_or(0.0),
+            .map(|book_ticker| {
+                let mut ticker: TickerBidAsk = book_ticker.into();
+                ticker.set_unified_symbol(
+                    self.unwrap_symbol(book_ticker.symbol.clone(), MarketType::Swap),
+                );
+                ticker
             })
             .collect();
         Ok(tickers)

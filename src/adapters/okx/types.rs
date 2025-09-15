@@ -9,9 +9,13 @@ pub struct OkxTickersListDto {
 pub struct OkxTickerDto {
     #[serde(rename = "instId")]
     pub symbol: String,
-    pub last: String,
-    pub open24h: String,
 
     #[serde(rename = "volCcy24h")]
     pub volume: String,
+
+    #[serde(rename = "bidPx")]
+    pub bid: String,
+
+    #[serde(rename = "askPx")]
+    pub ask: String,
 }

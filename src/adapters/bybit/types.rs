@@ -15,12 +15,12 @@ pub struct Result {
 pub struct BybitTickerDto {
     pub symbol: String,
 
-    #[serde(rename = "price24hPcnt")]
-    pub percentage_change: String,
-
-    #[serde(rename = "lastPrice")]
-    pub last_price: String,
-
     #[serde(rename = "volume24h")]
     pub volume_coin: String,
+
+    #[serde(rename = "bid1Price")]
+    pub bid: String,
+
+    #[serde(rename = "ask1Price")]
+    pub ask: String,
 }

@@ -1,7 +1,7 @@
 use super::types::BinanceBookTickerDto;
 use crate::adapters::common::{
     traits::ExchangeAdapter,
-    types::{ExchangeApiConfig, ExchangeMarketsInfo, MarketType, Ticker24HrChange},
+    types::{ExchangeApiConfig, ExchangeMarketsInfo, MarketType, TickerBidAsk},
 };
 use crate::common::parse_json_response;
 use anyhow::Error;
@@ -34,16 +34,16 @@ impl BinanceAdapter {
         &self,
         response: Vec<BinanceBookTickerDto>,
         market_type: MarketType,
-    ) -> Vec<Ticker24HrChange> {
+    ) -> Vec<TickerBidAsk> {
         response
             .iter()
             .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
-            .map(|book_ticker| Ticker24HrChange {
-                unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
-                symbol: book_ticker.symbol.clone(),
-                percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
-                last_price: book_ticker.last_price.parse().unwrap_or(0.0),
-                volume_usd: book_ticker.volume.parse().unwrap_or(0.0),
+            .map(|book_ticker| {
+                let mut ticker: TickerBidAsk = book_ticker.into();
+                ticker.set_unified_symbol(
+                    self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
+                );
+                ticker
             })
             .collect()
     }
@@ -67,8 +67,8 @@ impl ExchangeAdapter for BinanceAdapter {
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
-        const ENDPOINT: &str = "/api/v3/ticker/24hr";
+    ) -> Result<Vec<TickerBidAsk>, Error> {
+        const ENDPOINT: &str = "/api/v3/ticker/bookTicker";
         let client = reqwest::Client::new();
         let url: &str = &format!("{}{}", self.api.spot_url, ENDPOINT);
         let mut request = client.get(url);
@@ -87,11 +87,8 @@ impl ExchangeAdapter for BinanceAdapter {
     }
 
     // #[instrument(level = "info", skip(self))]
-    async fn fetch_swap_tickers(
-        &self,
-        ticker: Option<&str>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
-        const ENDPOINT: &str = "/fapi/v1/ticker/24hr";
+    async fn fetch_swap_tickers(&self, ticker: Option<&str>) -> Result<Vec<TickerBidAsk>, Error> {
+        const ENDPOINT: &str = "/fapi/v1/ticker/bookTicker";
         let client = reqwest::Client::new();
         let url: &str = &format!("{}{}", self.api.swap_url, ENDPOINT);
         let mut request = client.get(url);

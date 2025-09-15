@@ -9,7 +9,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use tokio::time::{sleep, Duration};
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 pub struct ArbitrageMonitor<const N: usize> {
     exchanges: [ExchangeType; N],

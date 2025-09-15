@@ -19,16 +19,20 @@ pub struct BinanceSymbolDto {
     pub contract_type: Option<String>,
 }
 
+fn default_volume() -> String {
+    "10000000".to_string()
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct BinanceBookTickerDto {
     pub symbol: String,
 
-    #[serde(rename = "priceChangePercent")]
-    pub percentage_change: String,
-
-    #[serde(rename = "lastPrice")]
-    pub last_price: String,
-
-    #[serde(rename = "quoteVolume")]
+    #[serde(rename = "quoteVolume", default = "default_volume")]
     pub volume: String,
+
+    #[serde(rename = "bidPrice")]
+    pub bid: String,
+
+    #[serde(rename = "askPrice")]
+    pub ask: String,
 }

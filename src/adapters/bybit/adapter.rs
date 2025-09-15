@@ -1,6 +1,6 @@
 use crate::adapters::bybit::types::BybitTickersListDto;
 use crate::adapters::common::types::{
-    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, Ticker24HrChange,
+    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, TickerBidAsk,
 };
 use crate::adapters::ExchangeAdapter;
 use crate::common::parse_json_response;
@@ -34,7 +34,7 @@ impl BybitAdapter {
     async fn fetch_tickers_unified(
         &self,
         market_type: MarketType,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    ) -> Result<Vec<TickerBidAsk>, Error> {
         const ENDPOINT: &str = "/v5/market/tickers";
         let client = reqwest::Client::new();
         let url: &str = &format!("{}{}", self.api.spot_url, ENDPOINT);
@@ -57,15 +57,11 @@ impl BybitAdapter {
             .iter()
             .filter(|book_ticker| book_ticker.symbol.ends_with("USDT"))
             .map(|book_ticker| {
-                let last_price = book_ticker.last_price.parse().unwrap_or(0.0);
-                let coin_volume = book_ticker.volume_coin.parse().unwrap_or(0.0);
-                Ticker24HrChange {
-                    unified_symbol: self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
-                    symbol: book_ticker.symbol.clone(),
-                    percentage_change: book_ticker.percentage_change.parse().unwrap_or(0.0),
-                    last_price,
-                    volume_usd: coin_volume * last_price,
-                }
+                let mut ticker: TickerBidAsk = book_ticker.into();
+                ticker.set_unified_symbol(
+                    self.unwrap_symbol(book_ticker.symbol.clone(), market_type),
+                );
+                ticker
             })
             .collect();
 
@@ -90,17 +86,14 @@ impl ExchangeAdapter for BybitAdapter {
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    ) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = tickers {
             debug!("Bybit API doesn't support tickers param yet");
         }
         Ok(self.fetch_tickers_unified(MarketType::Spot).await?)
     }
 
-    async fn fetch_swap_tickers(
-        &self,
-        tickers: Option<&str>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    async fn fetch_swap_tickers(&self, tickers: Option<&str>) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = tickers {
             debug!("Bybit API doesn't support tickers param yet");
         }

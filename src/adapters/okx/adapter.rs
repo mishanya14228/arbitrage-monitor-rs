@@ -1,5 +1,5 @@
 use crate::adapters::common::types::{
-    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, Ticker24HrChange,
+    ExchangeApiConfig, ExchangeMarketsInfo, MarketType, TickerBidAsk,
 };
 use crate::adapters::okx::types::OkxTickersListDto;
 use crate::adapters::ExchangeAdapter;
@@ -34,7 +34,7 @@ impl OkxAdapter {
     async fn fetch_tickers_unified(
         &self,
         market_type: MarketType,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    ) -> Result<Vec<TickerBidAsk>, Error> {
         const ENDPOINT: &str = "/api/v5/market/tickers";
         let client = reqwest::Client::new();
         let url: &str = &format!("{}{}", self.api.spot_url, ENDPOINT);
@@ -56,7 +56,7 @@ impl OkxAdapter {
                 ticker.symbol.ends_with("USDT") || ticker.symbol.ends_with("USDT-SWAP")
             })
             .map(|ticker| {
-                let mut formated_ticker: Ticker24HrChange = ticker.into();
+                let mut formated_ticker: TickerBidAsk = ticker.into();
                 formated_ticker.unified_symbol =
                     self.unwrap_symbol(formated_ticker.unified_symbol, market_type);
                 return formated_ticker;
@@ -110,16 +110,13 @@ impl ExchangeAdapter for OkxAdapter {
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    ) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = tickers {
             debug!("Okx API doesn't support tickers param yet");
         }
         Ok(self.fetch_tickers_unified(MarketType::Spot).await?)
     }
-    async fn fetch_swap_tickers(
-        &self,
-        tickers: Option<&str>,
-    ) -> Result<Vec<Ticker24HrChange>, Error> {
+    async fn fetch_swap_tickers(&self, tickers: Option<&str>) -> Result<Vec<TickerBidAsk>, Error> {
         if let Some(_tickers) = tickers {
             debug!("Okx API doesn't support tickers param yet");
         }
