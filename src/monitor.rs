@@ -27,7 +27,7 @@ impl<const N: usize> fmt::Debug for ArbitrageMonitor<N> {
     }
 }
 
-impl ArbitrageMonitor<5> {
+impl ArbitrageMonitor<6> {
     pub fn new() -> Self {
         info!("🚀 Initialized crypto arbitrage monitor");
         let exchanges = [
@@ -36,6 +36,7 @@ impl ArbitrageMonitor<5> {
             ExchangeType::OKX,
             ExchangeType::Gate,
             ExchangeType::Bitget,
+            ExchangeType::Kucoin,
         ];
         let mut adapters = HashMap::new();
         for &exchange in &exchanges {

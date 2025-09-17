@@ -2,6 +2,7 @@ use crate::adapters::binance::BinanceBookTickerDto;
 use crate::adapters::bitget::BitgetTickerDto;
 use crate::adapters::bybit::BybitTickerDto;
 use crate::adapters::gate::{GateSpotTickerDto, GateSwapTickerDto};
+use crate::adapters::kucoin::KucoinSpotTickerDto;
 use crate::adapters::okx::OkxTickerDto;
 use crate::adapters::ExchangeAdapter;
 use crate::common::ExchangeType;
@@ -72,8 +73,7 @@ impl From<&BybitTickerDto> for TickerBidAsk {
         }
     }
 }
-impl_ticker_from!(OkxTickerDto);
-impl_ticker_from!(BinanceBookTickerDto);
+
 impl From<&BitgetTickerDto> for TickerBidAsk {
     fn from(dto: &BitgetTickerDto) -> Self {
         TickerBidAsk {
@@ -85,5 +85,9 @@ impl From<&BitgetTickerDto> for TickerBidAsk {
         }
     }
 }
+
+impl_ticker_from!(OkxTickerDto);
+impl_ticker_from!(BinanceBookTickerDto);
 impl_ticker_from!(GateSpotTickerDto);
 impl_ticker_from!(GateSwapTickerDto);
+impl_ticker_from!(KucoinSpotTickerDto);

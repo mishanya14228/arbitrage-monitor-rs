@@ -65,6 +65,6 @@ impl Default for FilteringConfig {
         })
         .collect();
 
-        Self::new(0_500_000.0, 0.1, binance_trash)
+        Self::new(500_000.0, 0.1, binance_trash)
     }
 }

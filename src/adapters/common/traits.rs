@@ -66,11 +66,13 @@ pub trait ExchangeAdapter: Send {
         // let spot_tickers = spot_fetch_result?;
         // let swap_tickers = swap_fetch_result?;
         // self.set_spot_markets(spot_tickers.clone());
-        let swap_tickers = self.fetch_swap_tickers(None).await?;
-        self.set_swap_markets(swap_tickers.clone());
-        // Return combined markets
+        // self.set_swap_markets(swap_tickers.clone());
+        // // Return combined markets
         // let mut all_tickers: Vec<TickerBidAsk> = spot_tickers;
         // all_tickers.extend(swap_tickers);
+        // Ok(all_tickers)
+        let swap_tickers = self.fetch_swap_tickers(None).await?;
+        self.set_swap_markets(swap_tickers.clone());
         Ok(swap_tickers)
     }
 }
