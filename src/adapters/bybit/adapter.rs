@@ -2,6 +2,7 @@ use crate::adapters::bybit::types::BybitTickersListDto;
 use crate::adapters::common::types::{
     ExchangeApiConfig, ExchangeMarketsInfo, MarketType, TickerBidAsk,
 };
+use crate::adapters::common::websockets::WebSocketManager;
 use crate::adapters::ExchangeAdapter;
 use crate::common::parse_json_response;
 use anyhow::Error;
@@ -11,6 +12,7 @@ use tracing::debug;
 pub struct BybitAdapter {
     markets: ExchangeMarketsInfo,
     api: ExchangeApiConfig,
+    ws_manager: WebSocketManager,
 }
 
 impl BybitAdapter {
@@ -20,6 +22,7 @@ impl BybitAdapter {
                 ExchangeApiConfig {
                     spot_url: "https://api.bybit.com".to_string(),
                     swap_url: "https://api.bybit.com".to_string(),
+                    ws_swap_url: "wss://stream.bybit.com/v5/public/linear".to_string(),
                 }
             },
             markets: {
@@ -28,6 +31,7 @@ impl BybitAdapter {
                     swap: Vec::new(),
                 }
             },
+            ws_manager: WebSocketManager::new(),
         }
     }
 
@@ -71,16 +75,16 @@ impl BybitAdapter {
 
 #[async_trait]
 impl ExchangeAdapter for BybitAdapter {
-    fn name(&self) -> &str {
-        "Bybit"
-    }
-
     fn markets(&self) -> &ExchangeMarketsInfo {
         &self.markets
     }
 
     fn markets_mut(&mut self) -> &mut ExchangeMarketsInfo {
         &mut self.markets
+    }
+
+    fn name(&self) -> &str {
+        "Bybit"
     }
 
     async fn fetch_spot_tickers(
@@ -99,4 +103,11 @@ impl ExchangeAdapter for BybitAdapter {
         }
         Ok(self.fetch_tickers_unified(MarketType::Swap).await?)
     }
+
+    async fn init(&self) -> Result<(), Error> {
+        // self.ws_manager.connect_all()
+        Ok(())
+    }
+
+    fn orderbook_subscribe(&self, symbols: Vec<String>) {}
 }

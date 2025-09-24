@@ -21,6 +21,7 @@ impl GateAdapter {
                 ExchangeApiConfig {
                     spot_url: "https://api.gateio.ws".to_string(),
                     swap_url: "https://api.gateio.ws".to_string(),
+                    ws_swap_url: "wss://fx-ws.gateio.ws/v4/ws/usdt".to_string(),
                 }
             },
             markets: {

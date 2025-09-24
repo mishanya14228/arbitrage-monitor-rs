@@ -23,6 +23,7 @@ impl KucoinAdapter {
                 ExchangeApiConfig {
                     spot_url: "https://api.kucoin.com".to_string(),
                     swap_url: "https://api-futures.kucoin.com".to_string(),
+                    ws_swap_url: "https://api-futures.kucoin.com".to_string(),
                 }
             },
             markets: {

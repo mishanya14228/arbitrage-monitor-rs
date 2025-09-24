@@ -19,6 +19,7 @@ impl BinanceAdapter {
                 ExchangeApiConfig {
                     spot_url: "https://api.binance.com".to_string(),
                     swap_url: "https://fapi.binance.com".to_string(),
+                    ws_swap_url: "wss://fstream.binance.com/ws".to_string(),
                 }
             },
             markets: {

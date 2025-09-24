@@ -20,6 +20,7 @@ impl OkxAdapter {
                 ExchangeApiConfig {
                     spot_url: "https://www.okx.com".to_string(),
                     swap_url: "https://www.okx.com".to_string(),
+                    ws_swap_url: "wss://ws.okx.com:8443/ws/v5/public".to_string(),
                 }
             },
             markets: {

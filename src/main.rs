@@ -9,7 +9,7 @@ use crate::monitor::ArbitrageMonitor;
 async fn main() -> Result<(), anyhow::Error> {
     init_tracing().expect("Logger crashed");
 
-    let mut monitor = ArbitrageMonitor::new();
+    let mut monitor = ArbitrageMonitor::new().await;
     monitor.start_monitoring().await?;
 
     Ok(())

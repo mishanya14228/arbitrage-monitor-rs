@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use tracing::instrument;
 
 #[async_trait]
-pub trait ExchangeAdapter: Send {
+pub trait ExchangeAdapter: Send + Sync {
     fn markets(&self) -> &ExchangeMarketsInfo;
     fn markets_mut(&mut self) -> &mut ExchangeMarketsInfo;
 
@@ -49,6 +49,10 @@ pub trait ExchangeAdapter: Send {
         self.markets_mut().swap = markets;
     }
 
+    async fn init(&self) -> Result<(), Error> {
+        Ok(())
+    }
+
     async fn fetch_spot_tickers(
         &self,
         tickers: Option<Vec<&str>>,
@@ -62,7 +66,7 @@ pub trait ExchangeAdapter: Send {
     async fn update_tickers(&mut self) -> Result<Vec<TickerBidAsk>, Error> {
         // let (spot_fetch_result, swap_fetch_result) =
         //     tokio::join!(self.fetch_spot_tickers(None), self.fetch_swap_tickers(None));
-        // 
+        //
         // let spot_tickers = spot_fetch_result?;
         // let swap_tickers = swap_fetch_result?;
         // self.set_spot_markets(spot_tickers.clone());
@@ -74,5 +78,9 @@ pub trait ExchangeAdapter: Send {
         let swap_tickers = self.fetch_swap_tickers(None).await?;
         self.set_swap_markets(swap_tickers.clone());
         Ok(swap_tickers)
+    }
+
+    fn orderbook_subscribe(&self, symbols: Vec<String>) {
+        todo!()
     }
 }

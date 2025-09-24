@@ -16,6 +16,8 @@ pub type AdaptersMap = HashMap<ExchangeType, Box<dyn ExchangeAdapter>>;
 pub struct ExchangeApiConfig {
     pub spot_url: String,
     pub swap_url: String,
+    // pub ws_spot_url: String,
+    pub ws_swap_url: String,
 }
 
 #[derive(Debug, Clone)]

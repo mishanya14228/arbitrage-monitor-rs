@@ -1,4 +1,8 @@
-use crate::adapters::{BinanceAdapter, BitgetAdapter, BybitAdapter, ExchangeAdapter, GateAdapter, KucoinAdapter, OkxAdapter};
+use crate::adapters::{
+    BinanceAdapter, BitgetAdapter, BybitAdapter, ExchangeAdapter, GateAdapter, KucoinAdapter,
+    OkxAdapter,
+};
+use tracing::error;
 
 #[derive(Debug, Clone, Hash, Eq, PartialEq, Copy)]
 pub enum ExchangeType {
@@ -15,8 +19,8 @@ pub enum ExchangeType {
 }
 
 impl ExchangeType {
-    pub fn create_adapter(&self) -> Box<dyn ExchangeAdapter> {
-        match self {
+    pub async fn create_adapter(&self) -> Box<dyn ExchangeAdapter> {
+        let adapter: Box<dyn ExchangeAdapter> = match self {
             ExchangeType::Binance => Box::new(BinanceAdapter::new()),
             ExchangeType::Bybit => Box::new(BybitAdapter::new()),
             ExchangeType::OKX => Box::new(OkxAdapter::new()),
@@ -28,6 +32,10 @@ impl ExchangeType {
             // ExchangeType::MEXC => {}
             // ExchangeType::WhiteBit => {}
             // _ => Box::new(BinanceAdapter::new()),
-        }
+        };
+        if let Err(err) = adapter.init().await {
+            error!("Error initializing adapter: {}", err);
+        };
+        adapter
     }
 }

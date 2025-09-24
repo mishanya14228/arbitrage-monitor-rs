@@ -19,6 +19,7 @@ impl BitgetAdapter {
             api: ExchangeApiConfig {
                 spot_url: BASE_URL.to_string(),
                 swap_url: BASE_URL.to_string(),
+                ws_swap_url: BASE_URL.to_string(),
             },
             markets: ExchangeMarketsInfo {
                 spot: Vec::new(),
