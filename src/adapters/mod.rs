@@ -11,7 +11,7 @@ pub use binance::BinanceAdapter;
 pub use bitget::BitgetAdapter;
 pub use bybit::BybitAdapter;
 pub use gate::GateAdapter;
-pub use okx::OkxAdapter;
 pub use kucoin::KucoinAdapter;
+pub use okx::OkxAdapter;
 
 pub use common::traits::ExchangeAdapter;

@@ -6,6 +6,7 @@ pub enum MarketType {
 
 use futures::stream::SplitSink;
 use futures::{SinkExt, StreamExt};
+use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::broadcast::{self, Receiver as BroadcastReceiver, Sender as BroadcastSender};
@@ -16,8 +17,30 @@ use tokio_tungstenite::tungstenite::{Error as WsError, Message};
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 use tracing::{error, info};
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum SubscriptionType {
     Orderbook(String),
+}
+
+struct PreparedSubscription {
+    payload: Message,
+    topics: Vec<SubscriptionType>,
+}
+
+impl PreparedSubscription {
+    fn new(payload: Message, topics: Vec<SubscriptionType>) -> Self {
+        Self { payload, topics }
+    }
+}
+
+struct OrderbookSubscriptionContext<'a> {
+    client_index: usize,
+    market_type: MarketType,
+    symbols: &'a [String],
+}
+
+trait OrderbookPayloadBuilder: Send + Sync {
+    fn build_subscribe(&self, ctx: &OrderbookSubscriptionContext<'_>) -> PreparedSubscription;
 }
 
 pub struct WebSocketClient {
@@ -27,7 +50,7 @@ pub struct WebSocketClient {
     listener_handle: Option<JoinHandle<()>>,
     events_tx: BroadcastSender<Message>,
 
-    pub subscriptions: Vec<SubscriptionType>,
+    pub subscriptions: HashSet<SubscriptionType>,
 }
 
 impl WebSocketClient {
@@ -41,7 +64,7 @@ impl WebSocketClient {
             writer: None,
             listener_handle: None,
             events_tx,
-            subscriptions: vec![],
+            subscriptions: HashSet::new(),
         }
     }
 
@@ -95,7 +118,6 @@ impl WebSocketClient {
             error!("Not connected");
         }
     }
-
 }
 
 pub struct WebSocketManager {
@@ -149,7 +171,11 @@ trait WebSocketManagerTrait {
         Ok(client_ref)
     }
 
-    async fn orderbook_subscribe(&self, symbols: Vec<String>) -> UnboundedReceiver<Message> {
+    async fn orderbook_subscribe(
+        &self,
+        symbols: Vec<String>,
+        builder: Arc<dyn OrderbookPayloadBuilder>,
+    ) -> UnboundedReceiver<Message> {
         /*
          * GOAL: Create a single stream that merges messages from multiple WebSocket clients
          * Think of this like Promise.all() but for streams - we want to listen to multiple
@@ -169,6 +195,7 @@ trait WebSocketManagerTrait {
             let client_clone = client.clone(); // Clone the Arc<Mutex<WebSocketClient>>
             let symbols_clone = symbols.clone(); // Clone the symbols array
             let unified_tx_clone = unified_tx.clone(); // Clone the sender (like copying a callback function)
+            let builder = builder.clone();
 
             // 3. Start a background task for this client (like setTimeout or setImmediate in Node.js)
             //    Each task will:
@@ -184,28 +211,22 @@ trait WebSocketManagerTrait {
                     // .await here because tokio::Mutex is async-aware (unlike std::Mutex)
                     let mut client_guard = client_clone.lock().await;
 
-                    // Build the subscription message for this exchange's format
-                    // Transform ["BTCUSDT", "ETHUSDT"] -> ["orderbook.50.BTCUSDT", "orderbook.50.ETHUSDT"]
-                    let orderbook_symbols: Vec<String> = symbols_clone
-                        .iter()
-                        .map(|s| format!("orderbook.50.{}", s))
-                        .collect();
+                    let ctx = OrderbookSubscriptionContext {
+                        client_index: client_idx,
+                        market_type: client_guard.market_type,
+                        symbols: &symbols_clone,
+                    };
 
-                    // Create JSON subscription message like:
-                    // {"op":"subscribe", "req_id": 0, "args":["orderbook.50.BTCUSDT", "orderbook.50.ETHUSDT"]}
-                    let subscription_msg = format!(
-                        r#"{{"op":"subscribe", "req_id": {}, "args":[{}]}}"#,
-                        client_idx,
-                        orderbook_symbols
-                            .iter()
-                            .map(|s| format!(r#""{}""#, s)) // Wrap each symbol in quotes
-                            .collect::<Vec<_>>()
-                            .join(",") // Join with commas
-                    );
+                    let PreparedSubscription { payload, topics } = builder.build_subscribe(&ctx);
 
                     // Send the subscription message over WebSocket
                     // This is like: websocket.send(JSON.stringify(subscriptionMsg))
-                    client_guard.send(subscription_msg).await;
+                    client_guard.send(payload).await;
+
+                    // Track active subscriptions for later unsubscription logic
+                    for topic in topics {
+                        client_guard.subscriptions.insert(topic);
+                    }
 
                     println!("Client {} subscribed to symbols", client_idx);
                 } // Lock is automatically released here (like finally block)
@@ -260,10 +281,48 @@ impl WebSocketManagerTrait for WebSocketManager {
     // }
 }
 
+// struct BybitLinearPayloadBuilder;
+//
+// impl BybitLinearPayloadBuilder {
+//     fn new() -> Self {
+//         Self
+//     }
+// }
+
+// impl OrderbookPayloadBuilder for BybitLinearPayloadBuilder {
+//     fn build_subscribe(&self, ctx: &OrderbookSubscriptionContext<'_>) -> PreparedSubscription {
+//         let orderbook_topics: Vec<String> = ctx
+//             .symbols
+//             .iter()
+//             .map(|symbol| format!("orderbook.50.{}", symbol))
+//             .collect();
+//
+//         let args = orderbook_topics
+//             .iter()
+//             .map(|topic| format!(r#""{}""#, topic))
+//             .collect::<Vec<_>>()
+//             .join(",");
+//
+//         let payload = format!(
+//             r#"{{"op":"subscribe", "req_id": {}, "args":[{}]}}"#,
+//             ctx.client_index, args
+//         );
+//
+//         let topics = orderbook_topics
+//             .into_iter()
+//             .map(SubscriptionType::Orderbook)
+//             .collect();
+//
+//         PreparedSubscription::new(Message::Text(payload.into()), topics)
+//     }
+// }
+
 #[tokio::main]
 async fn main() {
     const URL: &str = "wss://stream.bybit.com/v5/public/linear";
     let mut manager = WebSocketManager::new();
+    // let payload_builder: Arc<dyn OrderbookPayloadBuilder> =
+    //     Arc::new(BybitLinearPayloadBuilder::new());
 
     // Create multiple connections to handle rate limits
     // In practice, you might use different URLs or endpoints
@@ -278,23 +337,25 @@ async fn main() {
     }
 
     // Subscribe to symbols across all clients
-    let symbols = vec![
-        "BTCUSDT".to_string(),
-        // "ETHUSDT".to_string(),
-        "SOLUSDT".to_string(),
-    ];
-    let mut unified_stream = manager.orderbook_subscribe(symbols).await;
+    // let symbols = vec![
+    //     "BTCUSDT".to_string(),
+    //     // "ETHUSDT".to_string(),
+    //     "SOLUSDT".to_string(),
+    // ];
+    // let mut unified_stream = manager
+    //     .orderbook_subscribe(symbols, payload_builder.clone())
+    //     .await;
 
     // Listen to the unified stream
-    println!(
-        "Listening to unified stream from {} clients",
-        manager.get_clients().len()
-    );
-    while let Some(message) = unified_stream.recv().await {
-        if let tokio_tungstenite::tungstenite::Message::Text(text) = message {
-            println!("Received: {}", text);
-        }
-    }
+    // println!(
+    //     "Listening to unified stream from {} clients",
+    //     manager.get_clients().len()
+    // );
+    // while let Some(message) = unified_stream.recv().await {
+    //     if let tokio_tungstenite::tungstenite::Message::Text(text) = message {
+    //         println!("Received: {}", text);
+    //     }
+    // }
 }
 
 // async fn interrupt(client: Arc<Mutex<WebSocketClient>>) {
