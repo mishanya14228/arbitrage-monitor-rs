@@ -27,15 +27,15 @@ impl<const N: usize> fmt::Debug for ArbitrageMonitor<N> {
     }
 }
 
-impl ArbitrageMonitor<2> {
+impl ArbitrageMonitor<5> {
     pub async fn new() -> Self {
         info!("🚀 Initialized crypto arbitrage monitor");
         let exchanges = [
-            // ExchangeType::Binance,
+            ExchangeType::Binance,
             ExchangeType::Bybit,
             ExchangeType::OKX,
-            // ExchangeType::Gate,
-            // ExchangeType::Bitget,
+            ExchangeType::Gate,
+            ExchangeType::Bitget,
             // ExchangeType::Kucoin,
         ];
         let mut adapters = HashMap::new();
@@ -47,7 +47,7 @@ impl ArbitrageMonitor<2> {
         Self {
             exchanges,
             adapters,
-            interval_seconds: 30,
+            interval_seconds: 15,
         }
     }
 
@@ -118,7 +118,7 @@ impl ArbitrageMonitor<2> {
         let results = join_all(futures).await;
         for result in results {
             if let Err(e) = result {
-                error!("Error while refetching tickers: {}", e);
+                error!("Error while refetching tickers: {:#}", e);
             }
         }
         Ok(())
